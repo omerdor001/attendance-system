@@ -1,0 +1,88 @@
+# ============================================================
+# .NET / C#
+# ============================================================
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+.vs/
+*.ncrunch*
+*.DotSettings.user
+TestResults/
+[Pp]ublish/
+*.publish.xml
+*.pubxml
+*.pubxml.user
+launchSettings.json
+
+# NuGet
+*.nupkg
+*.snupkg
+*.nuget.targets
+packages/
+!**/packages/build/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Entity Framework
+*.mdf
+*.ldf
+*.ndf
+migrations/
+
+# ============================================================
+# Node / Frontend
+# ============================================================
+node_modules/
+dist/
+dist-ssr/
+*.local
+.cache/
+.parcel-cache/
+.eslintcache
+
+# Vite
+vite.config.ts.timestamp-*
+
+# ============================================================
+# Environment & Secrets
+# ============================================================
+.env
+.env.local
+.env.*.local
+appsettings.Development.json
+appsettings.Local.json
+secrets.json
+
+# ============================================================
+# Docker
+# ============================================================
+docker-compose.override.yml
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================================
+# IDE
+# ============================================================
+.idea/
+*.iml
+.vscode/
+!.vscode/extensions.json
+!.vscode/settings.json
+
+# ============================================================
+# Logs & temp
+# ============================================================
+*.log
+logs/
+*.tmp
+*.swp

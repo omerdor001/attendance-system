@@ -1,0 +1,42 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: "AttendancePass1!"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD", "/opt/mssql-tools18/bin/sqlcmd", "-S", "localhost", "-U", "sa", "-P", "AttendancePass1!", "-Q", "SELECT 1", "-C"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: AttendanceSystem.API/Dockerfile
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    ports:
+      - "5000:8080"
+    environment:
+      ConnectionStrings__Default: "Server=sqlserver,1433;Database=AttendanceDb;User Id=sa;Password=AttendancePass1!;TrustServerCertificate=True;"
+      Jwt__Key: "SuperSecretKeyForAttendanceSystem2024!!"
+      Jwt__Issuer: "AttendanceSystem"
+      Jwt__Audience: "AttendanceSystemUsers"
+      WorldTimeApi__BaseUrl: "http://worldtimeapi.org/"
+      Cors__AllowedOrigins: "http://localhost:5173"
+      ASPNETCORE_ENVIRONMENT: "Production"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  sqlserver-data:
