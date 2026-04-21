@@ -16,7 +16,12 @@ using Polly.Extensions.Http;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        opts.JsonSerializerOptions.Converters.Add(new AttendanceSystem.API.UtcDateTimeConverter());
+        opts.JsonSerializerOptions.Converters.Add(new AttendanceSystem.API.UtcNullableDateTimeConverter());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

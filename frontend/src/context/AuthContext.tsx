@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import type { User } from '../types';
 
@@ -25,12 +25,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(u);
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setToken(null);
     setUser(null);
-  };
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('auth:logout', logout);
+    return () => window.removeEventListener('auth:logout', logout);
+  }, [logout]);
 
   return (
     <AuthContext.Provider value={{ token, user, login, logout }}>

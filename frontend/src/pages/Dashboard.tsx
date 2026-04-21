@@ -108,9 +108,16 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold text-gray-800">Attendance System</h1>
             <p className="text-sm text-gray-500">Welcome, {user?.username}</p>
           </div>
-          <button onClick={handleLogout} className="text-sm text-gray-600 hover:text-gray-900">
-            Sign out
-          </button>
+          <div className="flex items-center gap-4">
+            {user?.role === 'Admin' && (
+              <button onClick={() => navigate('/admin')} className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                Admin Panel
+              </button>
+            )}
+            <button onClick={handleLogout} className="text-sm text-gray-600 hover:text-gray-900">
+              Sign out
+            </button>
+          </div>
         </div>
       </header>
 
@@ -147,18 +154,6 @@ export default function Dashboard() {
               <p className="text-lg font-semibold text-gray-800">
                 {heartbeat?.workedHoursToday?.toFixed(2) ?? '0.00'}h
               </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Zurich Time</p>
-              <p className="text-lg font-semibold text-gray-800">
-                {heartbeat?.currentZurichTime
-                  ? formatZurichTime(heartbeat.currentZurichTime)
-                  : '--:--'}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Hours (30 days)</p>
-              <p className="text-lg font-semibold text-gray-800">{totalHours.toFixed(2)}h</p>
             </div>
           </div>
 
@@ -205,7 +200,9 @@ export default function Dashboard() {
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-800 mb-4">Anomalies Detected</h2>
             <div className="space-y-2">
-              {anomalies.map((a, i) => (
+              {anomalies
+                .filter(a => a.date === new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Zurich' }).format(new Date()))
+                .map((a, i) => (
                 <div key={i} className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
                   <span className="font-medium capitalize">{a.type.replace(/_/g, ' ')}</span>
                   {' — '}{a.date}: {a.description}

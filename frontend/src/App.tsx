@@ -8,7 +8,7 @@ import AdminPanel from './pages/AdminPanel';
 function RequireAuth({ children, role }: { children: React.ReactElement; role?: string }) {
   const { token, user } = useAuth();
   if (!token) return <Navigate to="/login" replace />;
-  if (role && user?.role !== role) return <Navigate to="/dashboard" replace />;
+  if (role === 'Admin' && user?.role !== 'Admin') return <Navigate to="/dashboard" replace />;
   return children;
 }
 

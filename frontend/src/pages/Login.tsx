@@ -14,6 +14,10 @@ export default function Login() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (!username.trim() || !password.trim()) {
+      setError('Invalid username or password');
+      return;
+    }
     setError('');
     setLoading(true);
     try {
@@ -21,7 +25,7 @@ export default function Login() {
       login(res.data.token, res.data.user);
       navigate(res.data.user.role === 'Admin' ? '/admin' : '/dashboard');
     } catch (err: any) {
-      setError(err.response?.data?.error ?? 'Login failed');
+      setError(err.response?.data?.error ?? 'Invalid username or password');
     } finally {
       setLoading(false);
     }
@@ -37,7 +41,7 @@ export default function Login() {
             <input
               type="text"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(e) => { setUsername(e.target.value); setError(''); }}
               required
               className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
@@ -47,12 +51,12 @@ export default function Login() {
             <input
               type="password"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(e) => { setPassword(e.target.value); setError(''); }}
               required
               className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
-          {error && <p className="text-red-500 text-sm">{error}</p>}
+          {error && <p className="text-red-600 text-sm font-medium">{error}</p>}
           <button
             type="submit"
             disabled={loading}

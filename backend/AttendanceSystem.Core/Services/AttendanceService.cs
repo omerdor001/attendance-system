@@ -12,13 +12,16 @@ public class AttendanceService(
     IAttendanceAnalysisService analysisService,
     ILogger<AttendanceService> logger) : IAttendanceService
 {
+    private static readonly TimeZoneInfo ZurichTz =
+        TimeZoneInfo.FindSystemTimeZoneById("Europe/Zurich");
+
     public async Task<ClockResult> ClockInAsync(int userId)
     {
         var zurichTime = await timeService.GetCurrentZurichTimeAsync();
         var utcNow = zurichTime.UtcDateTime;
 
-        var todayEvents = await GetTodayApprovedEvents(userId, utcNow);
-        var lastEvent = todayEvents.OrderBy(e => e.Timestamp).LastOrDefault();
+        var recentEvents = await GetRecentApprovedEvents(userId, utcNow);
+        var lastEvent = recentEvents.LastOrDefault();
 
         if (lastEvent?.EventType == "ClockIn")
             throw new ConflictException("Already clocked in — please clock out first");
@@ -40,8 +43,8 @@ public class AttendanceService(
         var zurichTime = await timeService.GetCurrentZurichTimeAsync();
         var utcNow = zurichTime.UtcDateTime;
 
-        var todayEvents = await GetTodayApprovedEvents(userId, utcNow);
-        var lastEvent = todayEvents.OrderBy(e => e.Timestamp).LastOrDefault();
+        var recentEvents = await GetRecentApprovedEvents(userId, utcNow);
+        var lastEvent = recentEvents.LastOrDefault();
 
         if (lastEvent == null || lastEvent.EventType != "ClockIn")
             throw new ConflictException("No active clock-in found — please clock in first");
@@ -54,7 +57,7 @@ public class AttendanceService(
             IsRetrospective = false
         });
 
-        var workedHours = AttendanceCalculator.CalculateWorkedHours(todayEvents.Append(evt).ToList());
+        var workedHours = AttendanceCalculator.CalculateWorkedHours(recentEvents.Append(evt).ToList());
         logger.LogInformation("User {UserId} clocked out at {Timestamp}", userId, utcNow);
         return new ClockResult(evt.Id, evt.Timestamp, zurichTime, "Clocked out successfully", workedHours);
     }
@@ -127,8 +130,9 @@ public class AttendanceService(
         var utcNow = zurichTime.UtcDateTime;
         var zurichLocal = zurichTime.DateTime;
 
-        var todayEvents = await GetTodayApprovedEvents(userId, utcNow);
-        var isClockedIn = todayEvents.OrderBy(e => e.Timestamp).LastOrDefault()?.EventType == "ClockIn";
+        var recentEvents = await GetRecentApprovedEvents(userId, utcNow);
+        var isClockedIn = recentEvents.LastOrDefault()?.EventType == "ClockIn";
+        var todayEvents = await GetTodayZurichEvents(userId, zurichTime);
         var workedHours = AttendanceCalculator.CalculateWorkedHours(todayEvents);
 
         var alerts = new List<AlertItem>();
@@ -169,14 +173,27 @@ public class AttendanceService(
 
         var approvedEvents = events.Where(IsApproved).OrderBy(e => e.Timestamp).ToList();
         var totalHours = AttendanceCalculator.CalculateWorkedHours(approvedEvents);
-        var anomalies = await analysisService.AnalyzeUserPatternsAsync(approvedEvents, user);
+        var allAnomalies = await analysisService.AnalyzeUserPatternsAsync(approvedEvents, user);
 
-        return new HistoryResult(entries, totalHours, anomalies);
+        var zurichToday = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, ZurichTz).Date.ToString("yyyy-MM-dd");
+        var todayAnomalies = allAnomalies.Where(a => a.Date == zurichToday).ToList();
+
+        return new HistoryResult(entries, totalHours, todayAnomalies);
     }
 
-    private async Task<List<AttendanceEvent>> GetTodayApprovedEvents(int userId, DateTime utcNow)
+    private async Task<List<AttendanceEvent>> GetRecentApprovedEvents(int userId, DateTime utcNow)
     {
-        var events = await repository.GetUserEventsForDayAsync(userId, utcNow.Date);
+        var events = await repository.GetUserEventsAsync(userId, utcNow.AddHours(-30), utcNow);
+        return events.Where(IsApproved).OrderBy(e => e.Timestamp).ToList();
+    }
+
+    private async Task<List<AttendanceEvent>> GetTodayZurichEvents(int userId, DateTimeOffset zurichTime)
+    {
+        var local = zurichTime.DateTime;
+        var dayStart = new DateTime(local.Year, local.Month, local.Day, 0, 0, 0);
+        var utcStart = new DateTimeOffset(dayStart, zurichTime.Offset).UtcDateTime;
+        var utcEnd = utcStart.AddDays(1);
+        var events = await repository.GetUserEventsAsync(userId, utcStart, utcEnd);
         return events.Where(IsApproved).OrderBy(e => e.Timestamp).ToList();
     }
 

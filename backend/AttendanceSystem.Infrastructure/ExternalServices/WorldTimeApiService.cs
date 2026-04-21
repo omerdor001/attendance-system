@@ -35,7 +35,9 @@ public class WorldTimeApiService(
             var datetimeStr = root.GetProperty("dateTime").GetString()
                 ?? throw new ExternalServiceException("TimeAPI returned null datetime");
 
-            return DateTimeOffset.Parse(datetimeStr);
+            var localDt = DateTime.Parse(datetimeStr, System.Globalization.CultureInfo.InvariantCulture);
+            var offset = ZurichTz.GetUtcOffset(localDt);
+            return new DateTimeOffset(localDt, offset);
         }
         catch (Exception ex) when (ex is not ExternalServiceException)
         {

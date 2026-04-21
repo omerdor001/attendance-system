@@ -49,7 +49,7 @@ public class AuthController(IAuthService authService) : ControllerBase
         }
         catch (BusinessException)
         {
-            return Unauthorized(new { error = "Invalid credentials" });
+            return Unauthorized(new { error = "Invalid username or password" });
         }
     }
 }
