@@ -49,7 +49,7 @@ public class AttendanceRepository(AppDbContext db) : IAttendanceRepository
         db.AttendanceEvents
           .Include(e => e.User)
           .Where(e => e.ApprovalStatus == "Pending")
-          .OrderBy(e => e.SubmittedAt)
+          .OrderByDescending(e => e.SubmittedAt)
           .ToListAsync();
 
 }

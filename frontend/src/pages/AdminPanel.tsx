@@ -66,8 +66,11 @@ export default function AdminPanel() {
 
   useEffect(() => {
     fetchPending();
+  }, [fetchPending]);
+
+  useEffect(() => {
     fetchReports();
-  }, [fetchPending, fetchReports]);
+  }, [fetchReports]);
 
   const handleApprove = async (id: number) => {
     try {

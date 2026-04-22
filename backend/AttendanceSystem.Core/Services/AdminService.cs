@@ -92,6 +92,7 @@ public class AdminService(
             var entries = userEvents.Select(e => new HistoryEntry(
                 e.Id, e.EventType, e.Timestamp, e.IsRetrospective,
                 e.RetrospectiveReason, e.ApprovalStatus, e.ApprovedAt)).ToList();
+            entries.Reverse(); // show newest events first
             var totalHours = AttendanceCalculator.CalculateWorkedHours(userEvents);
             var anomalies = await analysisService.AnalyzeUserPatternsAsync(userEvents, user);
             reports.Add(new EmployeeReport(user.Id, user.Username, totalHours, entries, anomalies));

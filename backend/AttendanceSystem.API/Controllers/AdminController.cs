@@ -5,12 +5,14 @@ using AttendanceSystem.Core.Exceptions;
 using AttendanceSystem.Core.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AttendanceSystem.API.Controllers;
 
 [ApiController]
 [Route("api/admin")]
 [Authorize(Roles = "Admin")]
+[EnableRateLimiting("admin")]
 public class AdminController(IAdminService adminService, ILogger<AdminController> logger) : ControllerBase
 {
     private int AdminUserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);

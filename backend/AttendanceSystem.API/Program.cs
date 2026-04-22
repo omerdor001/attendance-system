@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using System.Threading.RateLimiting;
 using AttendanceSystem.Core.Interfaces;
@@ -102,15 +103,33 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// Rate limiting: 10 req/min per user
+// Rate limiting: 10 req/min per user (partitioned by user ID), 60 req/min for admin endpoints
 builder.Services.AddRateLimiter(options => {
-    options.AddSlidingWindowLimiter("per-user", limiterOptions => {
-        limiterOptions.PermitLimit = 10;
-        limiterOptions.Window = TimeSpan.FromMinutes(1);
-        limiterOptions.SegmentsPerWindow = 6;
-        limiterOptions.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        limiterOptions.QueueLimit = 0;
-    });
+    static string PartitionKey(HttpContext ctx) =>
+        ctx.User?.FindFirstValue(ClaimTypes.NameIdentifier)
+        ?? ctx.Connection.RemoteIpAddress?.ToString()
+        ?? "anonymous";
+
+    options.AddPolicy("per-user", ctx =>
+        RateLimitPartition.GetSlidingWindowLimiter(PartitionKey(ctx), _ =>
+            new SlidingWindowRateLimiterOptions {
+                PermitLimit = 10,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("admin", ctx =>
+        RateLimitPartition.GetSlidingWindowLimiter(PartitionKey(ctx), _ =>
+            new SlidingWindowRateLimiterOptions {
+                PermitLimit = 60,
+                Window = TimeSpan.FromMinutes(1),
+                SegmentsPerWindow = 6,
+                QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                QueueLimit = 0
+            }));
+
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 });
 
@@ -128,9 +147,9 @@ var app = builder.Build();
 app.UseSwagger();
 app.UseSwaggerUI();
 app.UseCors();
-app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseRateLimiter();
 app.MapControllers().RequireRateLimiting("per-user");
 
 // Health check endpoint
