@@ -8,13 +8,11 @@ namespace AttendanceSystem.Infrastructure.ExternalServices;
 
 public static class PdfReportService
 {
-    static PdfReportService()
-    {
+    static PdfReportService() {
        Settings.License = LicenseType.Community;
     }
 
-    public static byte[] GenerateEmployeeReport(EmployeeReport report, DateTime from, DateTime to)
-    {
+    public static byte[] GenerateEmployeeReport(EmployeeReport report, DateTime from, DateTime to) {
         return Document.Create(doc =>
         {
             doc.Page(page =>
@@ -30,10 +28,8 @@ public static class PdfReportService
                            .Text($"Period: {from:yyyy-MM-dd} to {to:yyyy-MM-dd}")
                            .FontSize(9).FontColor(Colors.Grey.Darken1);
                     });
-
                     col.Item().PaddingTop(12).Element(c => RenderSummary(c, report));
                     col.Item().PaddingTop(12).Element(c => RenderEntriesTable(c, report.Entries));
-
                     if (report.Anomalies.Count > 0)
                         col.Item().PaddingTop(12).Element(c => RenderAnomalies(c, report.Anomalies));
                 });
@@ -46,7 +42,6 @@ public static class PdfReportService
     {
         return Document.Create(doc =>
         {
-            // Cover page
             doc.Page(page =>
             {
                 ConfigurePage(page);
@@ -66,9 +61,8 @@ public static class PdfReportService
                 });
             });
 
-            // Per-employee pages
-            foreach (var report in reports)
-            {
+            // Per-employee page
+            foreach (var report in reports) {
                 doc.Page(page =>
                 {
                     ConfigurePage(page);
@@ -95,7 +89,6 @@ public static class PdfReportService
                 {
                     col.Item().Text($"Period: {from:yyyy-MM-dd} to {to:yyyy-MM-dd}")
                        .FontSize(9).FontColor(Colors.Grey.Darken1);
-
                     col.Item().PaddingTop(10).Border(1).BorderColor(Colors.Grey.Lighten2).Padding(12).Column(sc =>
                     {
                         sc.Item().PaddingBottom(6).Text("Summary Statistics").Bold().FontSize(12);
@@ -109,7 +102,6 @@ public static class PdfReportService
                         sc.Item().Text($"Total Pending Retrospective Requests: {totalPending}");
                         sc.Item().Text($"Total Anomalies Detected: {totalAnomalies}");
                     });
-
                     var top5 = reports.OrderByDescending(r => r.TotalWorkedHours).Take(5).ToList();
                     col.Item().PaddingTop(15).Column(tc =>
                     {
@@ -143,15 +135,13 @@ public static class PdfReportService
         }).GeneratePdf();
     }
 
-    private static void ConfigurePage(PageDescriptor page)
-    {
+    private static void ConfigurePage(PageDescriptor page) {
         page.Size(PageSizes.A4);
         page.Margin(40);
         page.DefaultTextStyle(x => x.FontSize(10));
     }
 
-    private static void RenderHeader(IContainer container, string title)
-    {
+    private static void RenderHeader(IContainer container, string title) {
         container.BorderBottom(2).BorderColor(Colors.Blue.Medium).PaddingBottom(8).Row(row =>
         {
             row.RelativeItem().Text(title).Bold().FontSize(16).FontColor(Colors.Blue.Darken2);
@@ -160,8 +150,7 @@ public static class PdfReportService
         });
     }
 
-    private static void RenderFooter(IContainer container)
-    {
+    private static void RenderFooter(IContainer container) { 
         container.BorderTop(1).BorderColor(Colors.Grey.Lighten2).PaddingTop(6).Row(row =>
         {
             row.RelativeItem().Text("Attendance System — Confidential").FontSize(8).FontColor(Colors.Grey.Medium);
@@ -175,8 +164,7 @@ public static class PdfReportService
         });
     }
 
-    private static void RenderSummary(IContainer container, EmployeeReport report)
-    {
+    private static void RenderSummary(IContainer container, EmployeeReport report) {
         var daysWorked = report.Entries
             .Where(e => e.EventType == "ClockIn")
             .Select(e => e.Timestamp.Date)
@@ -185,7 +173,6 @@ public static class PdfReportService
         var retroPending = report.Entries.Count(e => e.IsRetrospective && e.ApprovalStatus == "Pending");
         var retroApproved = report.Entries.Count(e => e.IsRetrospective && e.ApprovalStatus == "Approved");
         var retroRejected = report.Entries.Count(e => e.IsRetrospective && e.ApprovalStatus == "Rejected");
-
         container.Border(1).BorderColor(Colors.Grey.Lighten2).Padding(10).Column(col =>
         {
             col.Item().PaddingBottom(6).Text("Summary").Bold().FontSize(11);
@@ -207,13 +194,11 @@ public static class PdfReportService
         });
     }
 
-    private static void RenderEntriesTable(IContainer container, List<HistoryEntry> entries)
-    {
+    private static void RenderEntriesTable(IContainer container, List<HistoryEntry> entries) {
         container.Column(col =>
         {
             col.Item().PaddingBottom(6).Text("Attendance Entries").Bold().FontSize(11);
-            if (entries.Count == 0)
-            {
+            if (entries.Count == 0) {
                 col.Item().Text("No attendance data available for this period.").FontColor(Colors.Grey.Medium);
                 return;
             }
@@ -234,8 +219,7 @@ public static class PdfReportService
                     header.Cell().Background(Colors.Blue.Lighten3).Padding(5).Text("Status").Bold();
                 });
                 bool odd = true;
-                foreach (var e in entries.OrderBy(e => e.Timestamp))
-                {
+                foreach (var e in entries.OrderBy(e => e.Timestamp)) {
                     var bg = odd ? Colors.White : Colors.Grey.Lighten4;
                     table.Cell().Background(bg).Padding(5).Text(e.Timestamp.ToString("yyyy-MM-dd HH:mm"));
                     table.Cell().Background(bg).Padding(5).Text(e.EventType);
@@ -247,8 +231,7 @@ public static class PdfReportService
         });
     }
 
-    private static void RenderAnomalies(IContainer container, List<AnomalyItem> anomalies)
-    {
+    private static void RenderAnomalies(IContainer container, List<AnomalyItem> anomalies) {
         container.Column(col =>
         {
             col.Item().PaddingBottom(6).Text("Anomalies Detected").Bold().FontSize(11);

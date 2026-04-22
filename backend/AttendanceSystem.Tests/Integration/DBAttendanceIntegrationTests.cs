@@ -83,7 +83,6 @@ public class DBIntegrationTests : IDisposable
         _time.Setup(t => t.GetCurrentZurichTimeAsync()).ReturnsAsync(ZurichNow.AddHours(9));
         var result = await _sut.ClockInAsync(1);
 
-        result.Message.Should().Be("Clocked in successfully");
         _db.AttendanceEvents.Count().Should().Be(3);
     }
 
@@ -95,7 +94,6 @@ public class DBIntegrationTests : IDisposable
 
         var result = await _sut.ClockOutAsync(1);
 
-        result.Message.Should().Be("Clocked out successfully");
         result.WorkedHoursToday.Should().BeApproximately(8.0, 0.01);
     }
 

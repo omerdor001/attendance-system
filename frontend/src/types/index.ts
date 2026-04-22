@@ -37,14 +37,14 @@ export interface Anomaly {
   type: string;
   date: string;
   description: string;
-  confidence: number;       //IDK if needed
+  confidence: number;      
   suggestedCorrection?: string;
 }
 
 export interface HistoryResponse {
   entries: AttendanceEntry[];
-  totalWorkedHours: number;    //IDK if needed
-  anomalies: Anomaly[];        //IDK if needed
+  totalWorkedHours: number;    
+  anomalies: Anomaly[];        
 }
 
 export interface PendingEntry {

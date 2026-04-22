@@ -5,10 +5,9 @@ namespace AttendanceSystem.Core.Interfaces;
 public interface IAttendanceRepository
 {
     Task<AttendanceEvent?> GetByIdAsync(int id);
-    Task<List<AttendanceEvent>> GetUserEventsAsync(int userId, DateTime from, DateTime to);
+    Task<List<AttendanceEvent>> GetEventsAsync(DateTime from, DateTime to, int? userId = null);
     Task<List<AttendanceEvent>> GetUserEventsForDayAsync(int userId, DateTime utcDate);
     Task<List<AttendanceEvent>> GetAllPendingAsync();
-    Task<AttendanceEvent> AddAsync(AttendanceEvent evt);
-    Task<AttendanceEvent> UpdateAsync(AttendanceEvent evt);
-    Task<List<AttendanceEvent>> GetAllUsersEventsAsync(DateTime from, DateTime to, int? userId);
+    Task<AttendanceEvent> AddAsync(AttendanceEvent evt);   //add event, used for clock-in/clock-out and retrospective event creation
+    Task<AttendanceEvent> UpdateAsync(AttendanceEvent evt);   //update event, used for approval/rejection and retrospective reason updates
 }

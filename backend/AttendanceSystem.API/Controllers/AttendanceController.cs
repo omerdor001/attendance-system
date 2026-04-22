@@ -10,7 +10,7 @@ namespace AttendanceSystem.API.Controllers;
 [ApiController]
 [Route("api/attendance")]
 [Authorize]
-public class AttendanceController(IAttendanceService attendanceService) : ControllerBase
+public class AttendanceController(IAttendanceService attendanceService, ILogger<AttendanceController> logger) : ControllerBase
 {
     private int UserId => int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
 
@@ -20,41 +20,52 @@ public class AttendanceController(IAttendanceService attendanceService) : Contro
         try
         {
             var result = await attendanceService.ClockInAsync(UserId);
+            logger.LogInformation("User clocked in successfully: {UserId} (Event ID: {EventId})", UserId, result.EventId);
             return Ok(new
             {
                 eventId = result.EventId,
-                zurichTime = result.ZurichTime,
-                message = result.Message
+                zurichTime = result.ZurichTime
             });
         }
-        catch (ConflictException ex) { return Conflict(new { error = ex.Message }); }
-        catch (ExternalServiceException ex) { return StatusCode(503, new { error = ex.Message }); }
+        catch (ConflictException ex) { 
+            logger.LogError(ex, "Conflict occurred while clocking in: {UserId}", UserId);
+            return Conflict(new { error = ex.Message });
+        }
+        catch (ExternalServiceException ex) { 
+            logger.LogError(ex, "External service error occurred while clocking in: {UserId}", UserId); 
+            return StatusCode(503, new { error = ex.Message }); 
+        }
     }
 
     [HttpPost("clock-out")]
     public async Task<IActionResult> ClockOut()
     {
-        try
-        {
+        try {
             var result = await attendanceService.ClockOutAsync(UserId);
+            logger.LogInformation("User clocked out successfully: {UserId} (Event ID: {EventId})", UserId, result.EventId);
             return Ok(new
             {
                 eventId = result.EventId,
                 zurichTime = result.ZurichTime,
-                workedHoursToday = result.WorkedHoursToday,
-                message = result.Message
+                workedHoursToday = result.WorkedHoursToday
             });
         }
-        catch (ConflictException ex) { return Conflict(new { error = ex.Message }); }
-        catch (ExternalServiceException ex) { return StatusCode(503, new { error = ex.Message }); }
+        catch (ConflictException ex) {
+            logger.LogError(ex, "Conflict occurred while clocking out: {UserId}", UserId);
+            return Conflict(new { error = ex.Message }); 
+        }
+        catch (ExternalServiceException ex) {
+            logger.LogError(ex, "External service error occurred while clocking out: {UserId}", UserId);
+            return StatusCode(503, new { error = ex.Message }); 
+        }
     }
 
     [HttpPost("clock-in-retrospective")]
     public async Task<IActionResult> ClockInRetrospective([FromBody] RetrospectiveRequest req)
     {
-        try
-        {
+        try {
             var result = await attendanceService.ClockInRetrospectiveAsync(UserId, req.Timestamp, req.Reason);
+            logger.LogInformation("User clocked in retrospectively: {UserId} (Event ID: {EventId}, Timestamp: {Timestamp})", UserId, result.EventId, req.Timestamp);
             return Ok(new
             {
                 eventId = result.EventId,
@@ -63,7 +74,10 @@ public class AttendanceController(IAttendanceService attendanceService) : Contro
                 message = result.Message
             });
         }
-        catch (Core.Exceptions.ValidationException ex) { return BadRequest(new { error = ex.Message }); }
+        catch (Core.Exceptions.ValidationException ex) {
+            logger.LogError(ex, "Validation error occurred while clocking in retrospectively: {UserId} (Timestamp: {Timestamp})", UserId, req.Timestamp);
+            return BadRequest(new { error = ex.Message }); 
+        }
         catch (ConflictException ex) { return Conflict(new { error = ex.Message }); }
     }
 
@@ -73,6 +87,7 @@ public class AttendanceController(IAttendanceService attendanceService) : Contro
         try
         {
             var result = await attendanceService.ClockOutRetrospectiveAsync(UserId, req.Timestamp, req.Reason);
+            logger.LogInformation("User clocked out retrospectively: {UserId} (Event ID: {EventId}, Timestamp: {Timestamp})", UserId, result.EventId, req.Timestamp);
             return Ok(new
             {
                 eventId = result.EventId,
@@ -81,16 +96,22 @@ public class AttendanceController(IAttendanceService attendanceService) : Contro
                 message = result.Message
             });
         }
-        catch (Core.Exceptions.ValidationException ex) { return BadRequest(new { error = ex.Message }); }
-        catch (ConflictException ex) { return Conflict(new { error = ex.Message }); }
+        catch (Core.Exceptions.ValidationException ex) {
+            logger.LogError(ex, "Validation error occurred while clocking out retrospectively: {UserId} (Timestamp: {Timestamp})", UserId, req.Timestamp);
+            return BadRequest(new { error = ex.Message }); 
+        }
+        catch (ConflictException ex) {
+            logger.LogError(ex, "Conflict occurred while clocking out retrospectively: {UserId} (Timestamp: {Timestamp})", UserId, req.Timestamp);
+            return Conflict(new { error = ex.Message }); 
+        }
     }
 
     [HttpGet("heartbeat")]
     public async Task<IActionResult> Heartbeat()
     {
-        try
-        {
+        try {
             var result = await attendanceService.GetHeartbeatAsync(UserId);
+            logger.LogInformation("Heartbeat retrieved successfully for user: {UserId}", UserId);
             return Ok(new
             {
                 currentZurichTime = result.CurrentZurichTime,
@@ -105,7 +126,10 @@ public class AttendanceController(IAttendanceService attendanceService) : Contro
                 pendingApprovalCount = result.PendingApprovalCount
             });
         }
-        catch (ExternalServiceException ex) { return StatusCode(503, new { error = ex.Message }); }
+        catch (ExternalServiceException ex) {
+            logger.LogError(ex, "External service error occurred while retrieving heartbeat for user: {UserId}", UserId);
+            return StatusCode(503, new { error = ex.Message }); 
+        }
     }
 
     [HttpGet("my-history")]
@@ -114,6 +138,7 @@ public class AttendanceController(IAttendanceService attendanceService) : Contro
         var fromDate = from ?? DateTime.UtcNow.AddMonths(-1);
         var toDate = to ?? DateTime.UtcNow;
         var result = await attendanceService.GetHistoryAsync(UserId, fromDate, toDate);
+        logger.LogInformation("Attendance history retrieved for user: {UserId} (From: {FromDate}, To: {ToDate}, Entries: {EntryCount})", UserId, fromDate, toDate, result.Entries.Count);
         return Ok(new
         {
             entries = result.Entries.Select(e => new

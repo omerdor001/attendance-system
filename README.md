@@ -79,7 +79,6 @@ AttendanceSystem.API           (Presentation Layer)
 
 ## API Endpoints
 
-See Swagger at `http://localhost:5000/swagger` for full documentation.
 
 | Method | Path | Auth |
 |--------|------|------|

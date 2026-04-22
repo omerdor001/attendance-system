@@ -16,8 +16,8 @@ public class UserRepository(AppDbContext db) : IUserRepository
     public Task<bool> ExistsByUsernameAsync(string username) =>
         db.Users.AnyAsync(u => u.Username == username);
 
-    public async Task<User> AddAsync(User user)
-    {
+    //Add to DB
+    public async Task<User> AddAsync(User user) {
         db.Users.Add(user);
         await db.SaveChangesAsync();
         return user;

@@ -9,6 +9,7 @@ public static class DatabaseSeeder
     {
         if (await db.Users.AnyAsync()) return;
 
+        // Seed users
         var admin = new User
         {
             Username = "admin",

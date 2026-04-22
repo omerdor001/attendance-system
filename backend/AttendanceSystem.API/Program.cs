@@ -23,18 +23,15 @@ builder.Services.AddControllers()
         opts.JsonSerializerOptions.Converters.Add(new AttendanceSystem.API.UtcNullableDateTimeConverter());
     });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen(c =>
-{
+builder.Services.AddSwaggerGen(c => {
     c.SwaggerDoc("v1", new OpenApiInfo { Title = "Attendance System API", Version = "v1" });
-    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
-    {
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme {
         In = ParameterLocation.Header,
         Description = "Enter: Bearer {token}",
         Name = "Authorization",
         Type = SecuritySchemeType.ApiKey
     });
-    c.AddSecurityRequirement(new OpenApiSecurityRequirement
-    {
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement {
         {
             new OpenApiSecurityScheme { Reference = new OpenApiReference { Type = ReferenceType.SecurityScheme, Id = "Bearer" } },
             Array.Empty<string>()
@@ -62,27 +59,22 @@ builder.Services.AddScoped<IAdminService, AdminService>();
 // Ollama analysis service
 builder.Services.Configure<AttendanceSystem.Infrastructure.ExternalServices.OllamaOptions>(
     builder.Configuration.GetSection("Ollama"));
-
 builder.Services.AddHttpClient<IAttendanceAnalysisService,
-    AttendanceSystem.Infrastructure.ExternalServices.OllamaAnalysisService>(client =>
-{
+    AttendanceSystem.Infrastructure.ExternalServices.OllamaAnalysisService>(client => {
     var baseUrl = builder.Configuration["Ollama:BaseUrl"] ?? "http://localhost:11434/";
     var timeoutSeconds = int.TryParse(builder.Configuration["Ollama:TimeoutSeconds"], out var t) ? t : 30;
     client.BaseAddress = new Uri(baseUrl);
     client.Timeout = TimeSpan.FromSeconds(timeoutSeconds);
 });
 
-// WorldTimeAPI with Polly retry + circuit breaker
+// API Time service
 var retryPolicy = HttpPolicyExtensions
     .HandleTransientHttpError()
     .WaitAndRetryAsync(3, attempt => TimeSpan.FromSeconds(Math.Pow(2, attempt - 1)));
-
 var circuitBreaker = HttpPolicyExtensions
     .HandleTransientHttpError()
     .CircuitBreakerAsync(5, TimeSpan.FromSeconds(60));
-
-builder.Services.AddHttpClient<IWorldTimeApiService, WorldTimeApiService>(client =>
-{
+builder.Services.AddHttpClient<IWorldTimeApiService, WorldTimeApiService>(client => {
     client.BaseAddress = new Uri(
         builder.Configuration["WorldTimeApi:BaseUrl"] ?? "https://timeapi.io/");
     client.Timeout = TimeSpan.FromSeconds(10);
@@ -90,15 +82,13 @@ builder.Services.AddHttpClient<IWorldTimeApiService, WorldTimeApiService>(client
 .AddPolicyHandler(retryPolicy)
 .AddPolicyHandler(circuitBreaker);
 
-// JWT
+// JWT service
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException("Jwt:Key not configured");
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
+    .AddJwtBearer(options => {
+        options.TokenValidationParameters = new TokenValidationParameters {
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
             ValidateIssuer = true,
@@ -113,10 +103,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 builder.Services.AddAuthorization();
 
 // Rate limiting: 10 req/min per user
-builder.Services.AddRateLimiter(options =>
-{
-    options.AddSlidingWindowLimiter("per-user", limiterOptions =>
-    {
+builder.Services.AddRateLimiter(options => {
+    options.AddSlidingWindowLimiter("per-user", limiterOptions => {
         limiterOptions.PermitLimit = 10;
         limiterOptions.Window = TimeSpan.FromMinutes(1);
         limiterOptions.SegmentsPerWindow = 6;
@@ -139,12 +127,10 @@ var app = builder.Build();
 
 app.UseSwagger();
 app.UseSwaggerUI();
-
 app.UseCors();
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
-
 app.MapControllers().RequireRateLimiting("per-user");
 
 // Health check endpoint
@@ -152,8 +138,7 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }))
    .AllowAnonymous();
 
 // Run migrations and seed on startup
-using (var scope = app.Services.CreateScope())
-{
+using (var scope = app.Services.CreateScope()) {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.Migrate();
     await AttendanceSystem.Infrastructure.Data.DatabaseSeeder.SeedAsync(db);

@@ -5,11 +5,13 @@ namespace AttendanceSystem.Infrastructure.Data;
 
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
+    // DbSets for entities
     public DbSet<User> Users => Set<User>();
     public DbSet<AttendanceEvent> AttendanceEvents => Set<AttendanceEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        // Configure User entity
         modelBuilder.Entity<User>(e =>
         {
             e.HasKey(u => u.Id);
@@ -20,6 +22,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(u => u.CreatedAt).HasDefaultValueSql("GETUTCDATE()");
         });
 
+        // Configure Attendance Event entity
         modelBuilder.Entity<AttendanceEvent>(e =>
         {
             e.HasKey(ae => ae.Id);

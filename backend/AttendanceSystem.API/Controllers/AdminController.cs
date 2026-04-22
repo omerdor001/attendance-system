@@ -22,6 +22,7 @@ public class AdminController(IAdminService adminService, ILogger<AdminController
         [FromQuery] int? userId)
     {
         var reports = await adminService.GetReportsAsync(from, to, userId);
+        logger.LogInformation("Retrieved reports for user {UserId}", userId);
         return Ok(new { employees = reports });
     }
 
@@ -29,6 +30,7 @@ public class AdminController(IAdminService adminService, ILogger<AdminController
     public async Task<IActionResult> PendingApprovals()
     {
         var entries = await adminService.GetPendingApprovalsAsync();
+        logger.LogInformation("Retrieved {Count} pending approvals", entries.Count);
         return Ok(new
         {
             pendingCount = entries.Count,
@@ -45,9 +47,9 @@ public class AdminController(IAdminService adminService, ILogger<AdminController
     [HttpPost("approve-retrospective/{eventId:int}")]
     public async Task<IActionResult> Approve(int eventId)
     {
-        try
-        {
+        try {
             var result = await adminService.ApproveAsync(eventId, AdminUserId);
+            logger.LogInformation("Approved retrospective event {EventId} by admin {AdminUserId}", eventId, AdminUserId);
             return Ok(new
             {
                 eventId = result.EventId,
@@ -55,19 +57,28 @@ public class AdminController(IAdminService adminService, ILogger<AdminController
                 approvedAt = result.ApprovedAt
             });
         }
-        catch (NotFoundException ex) { return NotFound(new { error = ex.Message }); }
-        catch (ConflictException ex) { return Conflict(new { error = ex.Message }); }
+        catch (NotFoundException ex) {
+            logger.LogError(ex, "Attempted to approve non-existent event {EventId}", eventId);
+            return NotFound(new { error = ex.Message }); 
+        }
+        catch (ConflictException ex) {
+            logger.LogError(ex, "Conflict occurred while approving event {EventId}", eventId);
+            return Conflict(new { error = ex.Message });
+        }
     }
 
     [HttpPost("reject-retrospective/{eventId:int}")]
     public async Task<IActionResult> Reject(int eventId, [FromBody] RejectRequest req)
     {
-        try
-        {
+        try {
             var result = await adminService.RejectAsync(eventId, req.RejectionReason);
+            logger.LogInformation("Rejected retrospective event {EventId} with reason: {Reason}", eventId, req.RejectionReason);    
             return Ok(new { eventId = result.EventId, approvalStatus = result.ApprovalStatus });
         }
-        catch (NotFoundException ex) { return NotFound(new { error = ex.Message }); }
+        catch (NotFoundException ex) {
+            logger.LogError(ex, "Attempted to reject non-existent event {EventId}", eventId);
+            return NotFound(new { error = ex.Message }); 
+        }
     }
 
     [HttpGet("export-employee-pdf/{userId:int}")]
@@ -76,21 +87,19 @@ public class AdminController(IAdminService adminService, ILogger<AdminController
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
-        try
-        {
+        try {
             var fromDate = from ?? new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             var toDate = to ?? DateTime.UtcNow;
             var reports = await adminService.GetReportsAsync(fromDate, toDate, userId);
             var report = reports.FirstOrDefault();
             if (report == null) return NotFound(new { error = "Employee not found" });
-
-            var pdfBytes = PdfReportService.GenerateEmployeeReport(report, fromDate, toDate);
+            var pdf = PdfReportService.GenerateEmployeeReport(report, fromDate, toDate);
             var safeName = report.Username.Replace(".", "").Replace(" ", "_");
             var filename = $"Employee_{safeName}_{fromDate:yyyy-MM-dd}_to_{toDate:yyyy-MM-dd}.pdf";
-            return File(pdfBytes, "application/pdf", filename);
+            logger.LogInformation("Generating PDF for employee {UserId}", userId);
+            return File(pdf, "application/pdf", filename);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             logger.LogError(ex, "Failed to generate PDF for employee {UserId}", userId);
             return StatusCode(500, new { error = "Failed to generate PDF report" });
         }
@@ -101,18 +110,17 @@ public class AdminController(IAdminService adminService, ILogger<AdminController
         [FromQuery] DateTime? from,
         [FromQuery] DateTime? to)
     {
-        try
-        {
+        try {
             var fromDate = from ?? new DateTime(DateTime.UtcNow.Year, DateTime.UtcNow.Month, 1);
             var toDate = to ?? DateTime.UtcNow;
             var reports = await adminService.GetReportsAsync(fromDate, toDate, null);
 
             var pdfBytes = PdfReportService.GenerateAllEmployeesReport(reports, fromDate, toDate);
             var filename = $"AllEmployees_Report_{fromDate:yyyy-MM-dd}_to_{toDate:yyyy-MM-dd}.pdf";
+            logger.LogInformation("Generating all-employees PDF report for period {From} to {To}", fromDate, toDate);
             return File(pdfBytes, "application/pdf", filename);
         }
-        catch (Exception ex)
-        {
+        catch (Exception ex) {
             logger.LogError(ex, "Failed to generate all-employees PDF report");
             return StatusCode(500, new { error = "Failed to generate PDF report" });
         }

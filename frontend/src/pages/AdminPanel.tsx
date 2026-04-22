@@ -22,7 +22,6 @@ export default function AdminPanel() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-
   const [pdfLoading, setPdfLoading] = useState<Record<number, boolean>>({});
   const [allPdfLoading, setAllPdfLoading] = useState(false);
 

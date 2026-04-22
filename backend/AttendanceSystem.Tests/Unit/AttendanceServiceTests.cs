@@ -23,7 +23,7 @@ public class AttendanceServiceTests
         _time.Setup(t => t.GetCurrentZurichTimeAsync()).ReturnsAsync(ZurichNow);
         _repo.Setup(r => r.AddAsync(It.IsAny<AttendanceEvent>()))
              .ReturnsAsync((AttendanceEvent e) => { e.Id = 1; return e; });
-        _repo.Setup(r => r.GetUserEventsAsync(It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int?>()))
              .ReturnsAsync([]);
         _analysis.Setup(a => a.AnalyzeUserPatternsAsync(It.IsAny<List<AttendanceEvent>>(), It.IsAny<User>()))
                  .ReturnsAsync([]);
@@ -36,19 +36,18 @@ public class AttendanceServiceTests
     [Fact]
     public async Task ClockIn_WhenNotClockedIn_ReturnsClockResult()
     {
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([]);
 
         var result = await _sut.ClockInAsync(1);
 
         Assert.Equal(1, result.EventId);
-        Assert.Equal("Clocked in successfully", result.Message);
     }
 
     [Fact]
     public async Task ClockIn_WhenAlreadyClockedIn_ThrowsConflict()
     {
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([new AttendanceEvent { EventType = "ClockIn", Timestamp = ZurichNow.UtcDateTime }]);
 
         await Assert.ThrowsAsync<ConflictException>(() => _sut.ClockInAsync(1));
@@ -59,19 +58,18 @@ public class AttendanceServiceTests
     [Fact]
     public async Task ClockOut_WhenClockedIn_ReturnsResult()
     {
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([new AttendanceEvent { EventType = "ClockIn", Timestamp = ZurichNow.UtcDateTime.AddHours(-1) }]);
 
         var result = await _sut.ClockOutAsync(1);
 
-        Assert.Equal("Clocked out successfully", result.Message);
         Assert.True(result.WorkedHoursToday > 0);
     }
 
     [Fact]
     public async Task ClockOut_WhenNotClockedIn_ThrowsConflict()
     {
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([]);
 
         await Assert.ThrowsAsync<ConflictException>(() => _sut.ClockOutAsync(1));
@@ -144,7 +142,7 @@ public class AttendanceServiceTests
             ExpectedShiftEndTime = new TimeOnly(17, 0)
         };
         _auth.Setup(a => a.GetUserByIdAsync(1)).ReturnsAsync(user);
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([new AttendanceEvent { EventType = "ClockIn", Timestamp = overtimeNow.UtcDateTime.AddHours(-10) }]);
         _repo.Setup(r => r.GetAllPendingAsync()).ReturnsAsync([]);
 
@@ -166,7 +164,7 @@ public class AttendanceServiceTests
             ExpectedShiftEndTime = new TimeOnly(17, 0)
         };
         _auth.Setup(a => a.GetUserByIdAsync(1)).ReturnsAsync(user);
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([]);
         _repo.Setup(r => r.GetAllPendingAsync()).ReturnsAsync([]);
 
@@ -189,7 +187,7 @@ public class AttendanceServiceTests
             ExpectedShiftEndTime = new TimeOnly(17, 0)
         };
         _auth.Setup(a => a.GetUserByIdAsync(1)).ReturnsAsync(user);
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([new AttendanceEvent { EventType = "ClockIn", Timestamp = midShift.UtcDateTime.AddHours(-4) }]);
         _repo.Setup(r => r.GetAllPendingAsync()).ReturnsAsync([]);
 
@@ -218,7 +216,7 @@ public class AttendanceServiceTests
 
         var clockIn  = ZurichNow.UtcDateTime.AddHours(-8);
         var clockOut = ZurichNow.UtcDateTime.AddHours(-0);
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([
                  new AttendanceEvent { Id = 1, EventType = "ClockIn",  Timestamp = clockIn,  IsRetrospective = false },
                  new AttendanceEvent { Id = 2, EventType = "ClockOut", Timestamp = clockOut, IsRetrospective = false }
@@ -238,7 +236,7 @@ public class AttendanceServiceTests
 
         var clockIn  = ZurichNow.UtcDateTime.AddHours(-8);
         var clockOut = ZurichNow.UtcDateTime.AddHours(-4);
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([
                  new AttendanceEvent { Id = 1, EventType = "ClockIn",  Timestamp = clockIn,  IsRetrospective = false },
                  new AttendanceEvent { Id = 2, EventType = "ClockOut", Timestamp = clockOut, IsRetrospective = false },
@@ -257,7 +255,7 @@ public class AttendanceServiceTests
     {
         var user = new User { Id = 1, Username = "test", Role = "Employee" };
         _auth.Setup(a => a.GetUserByIdAsync(1)).ReturnsAsync(user);
-        _repo.Setup(r => r.GetUserEventsAsync(1, It.IsAny<DateTime>(), It.IsAny<DateTime>()))
+        _repo.Setup(r => r.GetEventsAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), 1))
              .ReturnsAsync([]);
 
         // Service filters anomalies to today's Zurich date, so the date must match

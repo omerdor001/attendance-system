@@ -1,6 +1,6 @@
 namespace AttendanceSystem.Core.Interfaces;
 
-public record ClockResult(int EventId, DateTime Timestamp, DateTimeOffset ZurichTime, string Message, double? WorkedHoursToday = null);
+public record ClockResult(int EventId, DateTime Timestamp, DateTimeOffset ZurichTime, double? WorkedHoursToday = null);
 public record RetrospectiveResult(int EventId, DateTime Timestamp, string ApprovalStatus, string Message);
 public record HeartbeatResult(
     DateTimeOffset CurrentZurichTime,
@@ -14,8 +14,7 @@ public record HistoryEntry(int Id, string EventType, DateTime Timestamp, bool Is
     string? RetrospectiveReason, string? ApprovalStatus, DateTime? ApprovedAt);
 public record AnomalyItem(string Type, string Date, string Description, double Confidence, string? SuggestedCorrection = null);
 
-public interface IAttendanceService
-{
+public interface IAttendanceService {
     Task<ClockResult> ClockInAsync(int userId);
     Task<ClockResult> ClockOutAsync(int userId);
     Task<RetrospectiveResult> ClockInRetrospectiveAsync(int userId, DateTime timestamp, string reason);
