@@ -95,6 +95,8 @@ See Swagger at `http://localhost:5000/swagger` for full documentation.
 | GET | `/api/admin/pending-approvals` | Admin |
 | POST | `/api/admin/approve-retrospective/{id}` | Admin |
 | POST | `/api/admin/reject-retrospective/{id}` | Admin |
+| GET | `/api/admin/export-employee-pdf/{id}` | Admin |
+| GET | `/api/admin/export-all-employees-pdf` | Admin |
 
 ## Running Tests
 
