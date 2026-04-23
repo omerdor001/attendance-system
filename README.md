@@ -9,6 +9,8 @@ A production-ready attendance tracking system built with Clean Architecture.
 - **Time Source**: WorldTimeAPI (Europe/Zurich) — system clock is never used
 - **Auth**: JWT (HS256, 8h expiry) + BCrypt password hashing
 - **Resilience**: Polly retry (3x exponential backoff) + circuit breaker (5 failures → 60s open)
+- **AI Analysis**: Ollama (llama3.2) — optional; falls back to rule-based anomaly detection
+- **PDF Reports**: QuestPDF (Community)
 - **Containers**: Docker Compose (SQL Server + Backend)
 
 ## Quick Start
@@ -17,6 +19,7 @@ A production-ready attendance tracking system built with Clean Architecture.
 - Docker Desktop
 - Node.js 18+
 - .NET SDK 9
+- [Ollama](https://ollama.com) with `llama3.2` pulled *(optional — anomaly detection falls back to rule-based if unavailable)*
 
 ### 1. Start backend + database
 
@@ -36,6 +39,15 @@ npm run dev
 ```
 
 Frontend at: `http://localhost:5173`
+
+### 3. (Optional) Enable AI anomaly detection
+
+```bash
+ollama pull llama3.2
+ollama serve
+```
+
+If Ollama is not running, the system silently falls back to rule-based anomaly detection — no configuration needed.
 
 ## Default Credentials
 
@@ -60,7 +72,8 @@ AttendanceSystem.Core          (Domain + Business Logic — no external deps)
 AttendanceSystem.Infrastructure (Data + External Services)
   ├── Data/                    AppDbContext, EF Core Migrations
   ├── Repositories/            AttendanceRepository, UserRepository
-  └── ExternalServices/        WorldTimeApiService (Polly), JwtTokenService
+  └── ExternalServices/        WorldTimeApiService (Polly), JwtTokenService,
+                               OllamaAnalysisService (AI), PdfReportService (QuestPDF)
 
 AttendanceSystem.API           (Presentation Layer)
   ├── Controllers/             AttendanceController, AuthController, AdminController
@@ -73,7 +86,7 @@ AttendanceSystem.API           (Presentation Layer)
 - **503 on time failure**: If WorldTimeAPI is down, clock-in/out returns 503 (no silent fallback)
 - **Retrospective entries**: Employees can submit past clock-ins/outs with reasons
 - **Admin approval workflow**: Retrospective entries require admin approval before counting toward hours
-- **Anomaly detection**: Late arrival, early leave, overtime, forgotten clock-out
+- **AI anomaly detection**: Ollama (llama3.2) analyses patterns per employee; rule-based fallback if Ollama is unavailable
 - **Heartbeat**: Frontend polls every 2 min — returns alerts, clock status, pending count
 - **Rate limiting**: 10 req/min per user (sliding window)
 
@@ -100,11 +113,22 @@ AttendanceSystem.API           (Presentation Layer)
 ## Running Tests
 
 ```bash
+# All tests
 dotnet test backend/AttendanceSystem.Tests
+
+# Unit tests only
+dotnet test backend/AttendanceSystem.Tests --filter "FullyQualifiedName~Unit"
+
+# Integration tests only (requires running SQL Server)
+dotnet test backend/AttendanceSystem.Tests --filter "FullyQualifiedName~Integration"
 ```
+
+**Unit tests**: AttendanceService, AuthService, OllamaAnalysisService, PdfReportService, WorldTimeApiService  
+**Integration tests**: DB attendance events, DB user operations
 
 ## Known Limitations
 
 - Frontend runs locally (no nginx container)
+- Ollama must run locally on `:11434`; there is no Docker service for it — pull `llama3.2` separately
 - Email notifications not implemented (badge count only)
 - No refresh token rotation (8h JWT expiry)
